@@ -15,6 +15,12 @@ spec:
       containers:
         - name: auth
           image: dbssensei/auth
+          env:
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
 ---
 apiVersion: v1
 kind: Service
@@ -26,5 +32,5 @@ spec:
   ports:
     - name: auth
       protocol: TCP
-      port: 3000
+      port: 80
       targetPort: 3000      

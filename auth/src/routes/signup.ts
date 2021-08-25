@@ -1,8 +1,10 @@
 import express, { Request, Response } from "express";
-import { body, validationResult } from "express-validator";
+import jwt from "jsonwebtoken";
+import { body } from "express-validator";
 
-import { DatabaseConnectionError } from "../errors/database-connection-error";
-import { RequestValidationError } from "../errors/request-validation-error";
+import { validateRequest } from "../middlewares/validate.request";
+import { User } from "../models/user";
+import { BadRequestError } from "../errors/bad-request-error";
 
 const router = express.Router();
 
@@ -17,23 +19,39 @@ const bodyValidator = [
 router.post(
   "/api/users/signup",
   bodyValidator,
-  (req: Request, res: Response) => {
-    const errors = validationResult(req);
-
-    if (!errors.isEmpty()) {
-      // return res.status(400).send(errors.array());
-      // throw new Error("Invalid email or password");
-
-      throw new RequestValidationError(errors.array());
-    }
-
+  validateRequest,
+  async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
-    console.log(email, " - ", password);
-    throw new DatabaseConnectionError();
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      // console.log("Email in use");
+      // return res.status(400).send("Email in use");
+      throw new BadRequestError("Email in use");
+    }
 
-    // new User({email, password})
-    res.send("signup");
+    const user = User.build({
+      email,
+      password,
+    });
+
+    // Generate JWT
+    const userJwt = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+      },
+      process.env.JWT_KEY!
+    );
+
+    // Store it on session object
+    req.session = {
+      jwt: userJwt,
+    };
+
+    await user.save();
+
+    res.status(201).send(user);
   }
 );
 
