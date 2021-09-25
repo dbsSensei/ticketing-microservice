@@ -8,8 +8,9 @@ router.get(
   "/api/users/currentuser",
   currentUser,
   (req: Request, res: Response) => {
+    // console.log(req.headers)
     res.send({
-      currentUser: req.currentUser,
+      currentUser: req.currentUser || null,
     });
   }
 );
